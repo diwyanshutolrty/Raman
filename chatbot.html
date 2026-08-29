@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: data: blob: 'unsafe-inline' 'unsafe-eval'; connect-src *; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:;"> 
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Voice AI Assistant with Web Search & Info Hub</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        .header {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            text-align: center;
+            backdrop-filter: blur(15px);
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #00ff88, #00ccff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header-actions {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .refresh-button,
+        .info-button {
+            background: linear-gradient(135deg, #ff6b6b, #ff8e8e);
+            border: none;
+            border-radius: 25px;
+            padding: 10px 20px;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+        }
+
+        .refresh-button:hover,
+        .info-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 107, 107, 0.6);
+        }
+
+        .info-panel {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            z-index: 2000;
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: none;
+        }
+
+        .info-panel h3 {
+            color: #00ff88;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .info-panel .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .info-section {
+            margin-bottom: 25px;
+        }
+
+        .info-section h4 {
+            color: #00ccff;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+
+        .info-list {
+            list-style: none;
+        }
+
+        .info-list li {
+            margin: 8px 0;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            transition: background 0.3s ease;
+        }
+
+        .info-list li:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .info-list a {
+            color: #00ff88;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .info-list a:hover {
+            text-decoration: underline;
+        }
+
+        .robot-container {
+            position: fixed;
+            top: 50%;
+            left: 50px;
+            transform: translateY(-50%);
+            z-index: 1000;
+            transition: all 0.5s ease;
+        }
+
+        .robot {
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.5);
+            transition: all 0.3s ease;
+        }
+
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            max-width: 700px;
+            margin: 0 auto;
+            width: 100%;
+            padding: 20px;
+            margin-left: 200px;
+        }
+
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            max-height: 70vh;
+        }
+
+        .message {
+            margin: 15px 0;
+            padding: 15px 20px;
+            border-radius: 20px;
+            max-width: 85%;
+            word-wrap: break-word;
+            animation: messageSlide 0.4s ease-out;
+            position: relative;
+        }
+
+        @keyframes messageSlide {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .user-message {
+            background: linear-gradient(135deg, #00ff88, #00ccff);
+            margin-left: auto;
+            color: #000;
+            font-weight: 500;
+        }
+
+        .ai-message {
+            background: rgba(255, 255, 255, 0.15);
+            margin-right: auto;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 25px;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .mic-button,
+        .send-button {
+            background: linear-gradient(135deg, #00ff88, #00ccff);
+            border: none;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 20px rgba(0, 255, 136, 0.4);
+        }
+
+        .mic-button.listening {
+            transform: scale(1.05);
+            box-shadow: 0 0 18px rgba(0, 255, 136, 0.8);
+        }
+
+        .text-input {
+            flex: 1;
+            padding: 15px 20px;
+            border: none;
+            border-radius: 25px;
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            font-size: 16px;
+            outline: none;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            min-width: 200px;
+        }
+
+        .info-hub {
+            margin-top: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 20px;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .info-hub h3 {
+            color: #00ff88;
+            margin-bottom: 15px;
+            text-align: center;
+            font-size: 1.5em;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .info-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 15px;
+            transition: transform 0.3s ease;
+        }
+
+        .info-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .info-card h4 {
+            color: #00ccff;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+
+        @media (max-width: 768px) {
+            .robot-container {
+                display: none;
+            }
+
+            .chat-container {
+                margin-left: 0;
+                padding: 10px;
+            }
+
+            .controls {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .info-panel {
+                width: 95%;
+                max-width: 95%;
+            }
+        }
+
+        .status {
+            text-align: center;
+            padding: 10px;
+            margin: 10px auto;
+            max-width: 700px;
+            border-radius: 10px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .listening-status {
+            background: rgba(0, 255, 136, 0.2);
+            color: #00ff88;
+            border: 1px solid #00ff88;
+        }
+
+        .error-status {
+            background: rgba(255, 107, 107, 0.2);
+            color: #ff6b6b;
+            border: 1px solid #ff6b6b;
+        }
+
+        .typing-indicator {
+            display: inline-block;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 0.4;
+            }
+
+            50% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0.4;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>🤖 AI Voice Assistant</h1>
+        <p>Advanced Voice Recognition & Web Search</p>
+        <div class="header-actions">
+            <button class="refresh-button" onclick="refreshChat()" title="Clear all messages and search results">
+                🔄 Refresh
+            </button>
+            <button class="info-button" onclick="toggleInfoPanel()" title="View college and company information">
+                📊 Info Hub
+            </button>
+        </div>
+    </div>
+
+    <div class="robot-container">
+        <div class="robot" id="robot">
+            <div class="robot-face" id="robotFace">🤖</div>
+        </div>
+    </div>
+
+    <div class="chat-container">
+        <div class="messages" id="messages">
+            <div class="message ai-message">
+                👋 Hello! I'm your advanced AI assistant with web search capabilities.<br><br>
+                🎤 Click the microphone and try saying:<br>
+                • "Search for cats on Google"<br>
+                • "Open YouTube"<br>
+                • "Find restaurants near me"<br>
+                • "What's the weather today?"<br><br>
+                📊 Use the Info Hub button to explore colleges and companies!
+            </div>
+        </div>
+
+        <div id="status" class="status"></div>
+
+        <div class="controls">
+            <button class="mic-button" id="micButton" onclick="toggleListening()" title="Start speaking">
+                🎤
+            </button>
+            <input type="text" class="text-input" id="textInput" placeholder="Type or speak your command..."
+                onkeypress="handleKeyPress(event)">
+            <button class="send-button" onclick="processCommand()" title="Send command">
+                ➤
+            </button>
+        </div>
+
+        <div class="info-hub">
+            <h3>📊 Information Hub</h3>
+            <div class="info-grid">
+                <div class="info-card">
+                    <h4>🏫 Top Colleges</h4>
+                    <ul class="info-list">
+                        <li><a href="https://www.iitb.ac.in" target="_blank">IIT Bombay</a></li>
+                        <li><a href="https://www.iitd.ac.in" target="_blank">IIT Delhi</a></li>
+                        <li><a href="https://www.iitk.ac.in" target="_blank">IIT Kanpur</a></li>
+                        <li><a href="https://www.iitm.ac.in" target="_blank">IIT Madras</a></li>
+                        <li><a href="https://www.bits-pilani.ac.in" target="_blank">BITS Pilani</a></li>
+                        <li><a href="https://www.du.ac.in" target="_blank">Delhi University</a></li>
+                    </ul>
+                </div>
+                <div class="info-card">
+                    <h4>🏢 Major Companies</h4>
+                    <ul class="info-list">
+                        <li><a href="https://careers.google.com" target="_blank">Google</a></li>
+                        <li><a href="https://www.microsoft.com/en-in/careers" target="_blank">Microsoft</a></li>
+                        <li><a href="https://www.amazon.jobs" target="_blank">Amazon</a></li>
+                        <li><a href="https://www.apple.com/careers" target="_blank">Apple</a></li>
+                        <li><a href="https://www.facebook.com/careers" target="_blank">Meta</a></li>
+                        <li><a href="https://careers.tcs.com" target="_blank">TCS</a></li>
+                    </ul>
+                </div>
+                <div class="info-card">
+                    <h4>📚 Resources</h4>
+                    <ul class="info-list">
+                        <li><a href="https://leetcode.com" target="_blank">LeetCode - Coding Practice</a></li>
+                        <li><a href="https://www.coursera.org" target="_blank">Coursera - Online Courses</a></li>
+                        <li><a href="https://www.udemy.com" target="_blank">Udemy - Skill Development</a></li>
+                        <li><a href="https://www.khanacademy.org" target="_blank">Khan Academy - Free Learning</a></li>
+                    </ul>
+                </div>
+                <div class="info-card" onclick="toggleInfoPanel()" style="cursor: pointer;">
+                    <h4>💼 Career Tips</h4>
+                    <ul class="info-list">
+                        <li>Build a strong portfolio</li>
+                        <li>Practice coding daily</li>
+                        <li>Network on LinkedIn</li>
+                        <li>Prepare for interviews</li>
+                        <li>Stay updated with tech trends</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="info-panel" id="infoPanel">
+        <button class="close-btn" onclick="toggleInfoPanel()">&times;</button>
+        <h3>📊 Detailed Information Hub</h3>
+
+        <div class="info-section">
+            <h4>🏫 Top Engineering Colleges in India</h4>
+            <ul class="info-list">
+                <li><strong>IIT Bombay:</strong> Premier engineering institute in Mumbai, known for CS and Electrical
+                    programs</li>
+                <li><strong>IIT Delhi:</strong> Leading institute in Delhi, excellent for research and placements</li>
+                <li><strong>IIT Kanpur:</strong> Renowned for engineering and science programs</li>
+                <li><strong>IIT Madras:</strong> Top institute in Chennai, strong in research and innovation</li>
+                <li><strong>IIT Kharagpur:</strong> Oldest IIT, diverse programs and strong alumni network</li>
+                <li><strong>BITS Pilani:</strong> Private deemed university, excellent placements and industry
+                    connections</li>
+                <li><strong>IIIT Hyderabad:</strong> Focus on IT and research, great for CS students</li>
+                <li><strong>NIT Trichy:</strong> Top NIT with excellent engineering programs</li>
+            </ul>
+        </div>
+
+        <div class="info-section">
+            <h4>🏢 Major Tech Companies</h4>
+            <ul class="info-list">
+                <li><strong>Google:</strong> Search, cloud computing, AI/ML roles, competitive salaries</li>
+                <li><strong>Microsoft:</strong> Software development, cloud services, enterprise solutions</li>
+                <li><strong>Amazon:</strong> E-commerce, AWS, logistics, diverse tech roles</li>
+                <li><strong>Apple:</strong> Consumer electronics, software, design-focused roles</li>
+                <li><strong>Meta:</strong> Social media, VR/AR, AI research, innovative projects</li>
+                <li><strong>TCS:</strong> IT services, consulting, global opportunities</li>
+                <li><strong>Infosys:</strong> Software services, digital transformation</li>
+                <li><strong>Wipro:</strong> Technology services, consulting, emerging tech</li>
+            </ul>
+        </div>
+
+        <div class="info-section">
+            <h4>💡 Career Preparation Tips</h4>
+            <div class="career-tips">
+                <h5>🏗️ Build a Strong Portfolio</h5>
+                <ul class="info-list">
+                    <li><strong>GitHub Projects:</strong> Create and maintain a GitHub profile with 5-10 diverse
+                        projects showcasing different skills (web apps, APIs, data analysis)</li>
+                    <li><strong>Personal Website:</strong> Build a portfolio website using HTML/CSS/JS or frameworks
+                        like React to display your work</li>
+                    <li><strong>Live Demos:</strong> Deploy projects on platforms like Vercel, Netlify, or Heroku for
+                        live demonstrations</li>
+                    <li><strong>Documentation:</strong> Write clear README files explaining project goals, technologies
+                        used, and how to run the code</li>
+                    <li><strong>Problem Solving:</strong> Include projects that solve real-world problems, not just
+                        tutorials</li>
+                </ul>
+
+                <h5>💻 Practice Coding Daily</h5>
+                <ul class="info-list">
+                    <li><strong>Consistent Schedule:</strong> Dedicate 1-2 hours daily to coding, even on weekends</li>
+                    <li><strong>Multiple Platforms:</strong> Use LeetCode, HackerRank, CodeChef for algorithmic problems
+                    </li>
+                    <li><strong>Language Mastery:</strong> Focus on one primary language (Python/JavaScript) and one
+                        secondary language</li>
+                    <li><strong>Project-Based Learning:</strong> Build small projects weekly to apply concepts learned
+                    </li>
+                    <li><strong>Code Review:</strong> Participate in open-source projects or code review sessions</li>
+                </ul>
+
+                <h5>🤝 <a href="linkedin://" onclick="openLinkedInApp()"
+                        style="color: #00ff88; text-decoration: none;">Network on LinkedIn</a></h5>
+                <ul class="info-list">
+                    <li><strong>Complete Profile:</strong> Add professional photo, detailed headline, and comprehensive
+                        experience section</li>
+                    <li><strong>Connect Strategically:</strong> Send personalized connection requests to professionals
+                        in your field</li>
+                    <li><strong>Engage Actively:</strong> Like, comment, and share relevant content daily</li>
+                    <li><strong>Join Groups:</strong> Participate in industry-specific LinkedIn groups and discussions
+                    </li>
+                    <li><strong>Share Knowledge:</strong> Post about your learnings, projects, and insights regularly
+                    </li>
+                </ul>
+
+                <h5>🎯 Prepare for Interviews</h5>
+                <ul class="info-list">
+                    <li><strong>Technical Questions:</strong> Practice system design, data structures, and algorithms
+                        extensively</li>
+                    <li><strong>Behavioral Questions:</strong> Prepare STAR (Situation, Task, Action, Result) stories
+                        for common questions</li>
+                    <li><strong>Mock Interviews:</strong> Conduct practice interviews with peers or use platforms like
+                        Pramp</li>
+                    <li><strong>Company Research:</strong> Study company culture, products, and recent news before each
+                        interview</li>
+                    <li><strong>Follow-up:</strong> Send thank-you emails after interviews expressing continued interest
+                    </li>
+                </ul>
+
+                <h5>📈 Stay Updated with Tech Trends</h5>
+                <ul class="info-list">
+                    <li><strong>News Sources:</strong> Follow TechCrunch, Hacker News, and industry blogs daily</li>
+                    <li><strong>Social Media:</strong> Follow tech leaders on Twitter and LinkedIn for real-time updates
+                    </li>
+                    <li><strong>Online Courses:</strong> Take courses on Udemy, Coursera for emerging technologies</li>
+                    <li><strong>Conferences:</strong> Attend virtual conferences and webinars (Google I/O, AWS
+                        re:Invent)</li>
+                    <li><strong>Experimentation:</strong> Try new frameworks, tools, and technologies in side projects
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let recognition;
+        let isListening = false;
+        let isStarting = false;
+        let recognitionPending = false;
+        let voices = [];
+        let conversationHistory = [];
+        let currentSearchResults = [];
+        let speechSynthesis = window.speechSynthesis;
+        let currentVoice = null;
+
+        // Initialize speech synthesis
+        function loadVoices() {
+            voices = speechSynthesis.getVoices() || [];
+            if (voices.length > 0) {
+                currentVoice = voices.find(voice => voice.lang.includes('en') && /female/i.test(voice.name)) ||
+                    voices.find(voice => voice.lang.includes('en')) ||
+                    voices[0];
+            }
+        }
+
+        function initSpeechSynthesis() {
+            if (!('speechSynthesis' in window)) {
+                console.warn('Speech synthesis not supported in this browser.');
+                return;
+            }
+
+            speechSynthesis = window.speechSynthesis;
+            speechSynthesis.onvoiceschanged = loadVoices;
+            loadVoices();
+            if (!currentVoice) {
+                setTimeout(loadVoices, 500);
+            }
+        }
+
+        // Speak text function
+        function speakText(text) {
+            if (!('speechSynthesis' in window) || !speechSynthesis) {
+                console.log('Speech synthesis not available');
+                return;
+            }
+
+            loadVoices();
+            if (!currentVoice) {
+                console.log('No speech synthesis voice available');
+                return;
+            }
+
+            speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.voice = currentVoice;
+            utterance.rate = 1.0;
+            utterance.pitch = 1.0;
+            utterance.volume = 1.0;
+            speechSynthesis.speak(utterance);
+        }
+
+        // Speak search query
+        function speakSearchQuery(query) {
+            const introPhrases = [
+                `Searching for ${query}`,
+                `Looking up ${query}`,
+                `Finding information about ${query}`,
+                `Let me search for ${query}`
+            ];
+
+            const randomPhrase = introPhrases[Math.floor(Math.random() * introPhrases.length)];
+            speakText(randomPhrase);
+        }
+
+        // Initialize speech recognition
+        function initSpeechRecognition() {
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+                recognition.continuous = false;
+                recognition.interimResults = true;
+                recognition.lang = 'en-US';
+
+                recognition.onstart = () => {
+                    isListening = true;
+                    updateStatus('🎤 Listening... Speak your command!', 'listening-status');
+                    document.getElementById('micButton').classList.add('listening');
+                    document.getElementById('robot').classList.add('listening');
+                    document.getElementById('robotFace').textContent = '👂';
+                };
+
+                recognition.onresult = (event) => {
+                    // Build transcript from ONLY the newly received results.
+                    let finalTranscript = '';
+                    let interimTranscript = '';
+
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                        const result = event.results[i];
+                        const text = result[0] ? result[0].transcript : '';
+                        if (!text) continue;
+                        if (result.isFinal) finalTranscript += text;
+                        else interimTranscript += text;
+                    }
+
+                    const combined = (finalTranscript || interimTranscript).trim();
+                    document.getElementById('textInput').value = combined;
+
+                    if (finalTranscript.trim() && !recognitionPending) {
+                        recognitionPending = true;
+                        try {
+                            processCommand(finalTranscript.trim());
+                        } finally {
+                            // prevent duplicate processing from rapid onresult callbacks
+                            setTimeout(() => {
+                                recognitionPending = false;
+                            }, 350);
+                        }
+
+                        // Ensure we don't keep listening after final result.
+                        try { recognition.stop(); } catch (e) { /* ignore */ }
+                    }
+                };
+
+                recognition.onend = () => {
+                    isListening = false;
+                    updateStatus('', '');
+                    document.getElementById('micButton').classList.remove('listening');
+                    document.getElementById('robot').classList.remove('listening');
+                    document.getElementById('robotFace').textContent = '🤖';
+                };
+
+                recognition.onerror = (event) => {
+                    updateStatus(`❌ Voice Error: ${event.error}`, 'error-status');
+                    console.error('Speech recognition error:', event.error);
+                    document.getElementById('robot').classList.remove('listening');
+                    document.getElementById('robotFace').textContent = '😵';
+                };
+            } else {
+                updateStatus('❌ Speech recognition not supported', 'error-status');
+            }
+        }
+
+        function toggleListening() {
+            if (!recognition) {
+                initSpeechRecognition();
+            }
+
+            if (!recognition) {
+                updateStatus('❌ Voice recognition not available in this browser.', 'error-status');
+                return;
+            }
+
+            try {
+                if (isListening) {
+                    recognition.stop();
+                } else {
+                    recognition.start();
+                }
+            } catch (error) {
+                updateStatus(`❌ Voice error: ${error.message || error}`, 'error-status');
+                console.error('Recognition start/stop error:', error);
+            }
+        }
+
+        function refreshChat() {
+            const messages = document.getElementById('messages');
+            messages.innerHTML = `
+                <div class="message ai-message">
+                    👋 Chat refreshed! I'm ready to help you with web searches and information.<br><br>
+                    🎤 Try saying:<br>
+                    • "Search for cats on Google"<br>
+                    • "Open YouTube"<br>
+                    • "Find restaurants near me"<br>
+                    • "What's the weather today?"
+                </div>
+            `;
+            conversationHistory = [];
+            currentSearchResults = [];
+            updateStatus('✅ Chat refreshed successfully!', '');
+            setTimeout(() => updateStatus('', ''), 2000);
+        }
+
+        function toggleInfoPanel() {
+            const panel = document.getElementById('infoPanel');
+            panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+        }
+
+        function processCommand(commandText) {
+            const text = commandText || document.getElementById('textInput').value.trim();
+            if (!text) return;
+
+            addMessage(text, 'user-message');
+            document.getElementById('textInput').value = '';
+
+            addMessage('<span class="typing-indicator">Processing command</span>', 'ai-message', true);
+            document.getElementById('robot').classList.add('searching');
+            document.getElementById('robotFace').textContent = '🧠';
+
+            setTimeout(() => {
+                const response = handleVoiceCommand(text);
+                removeTypingIndicator();
+                document.getElementById('robot').classList.remove('searching');
+                document.getElementById('robotFace').textContent = '🤖';
+
+                if (typeof response === 'string') {
+                    addMessage(response, 'ai-message');
+                    speakText(response);
+                } else {
+                    addMessage(response.text, 'ai-message');
+                    speakText(response.text);
+                    if (response.results && response.results.length > 0) {
+                        displaySearchResults(response.results);
+                    }
+                }
+
+                conversationHistory.push({ role: 'user', content: text });
+            }, 1500);
+        }
+
+        function handleVoiceCommand(command) {
+            const raw = (command || '').trim();
+            const lower = raw.toLowerCase().trim();
+
+            if (lower.startsWith('search') || lower.startsWith('find') || lower.startsWith('look up')) {
+                const query = raw.replace(/^(search|find|look up)\s+/i, '').trim();
+                return performWebSearch(query);
+            }
+
+            if (lower.startsWith('open') || lower.startsWith('go to') || lower.startsWith('visit')) {
+                const site = lower.replace(/^(open|go to|visit)\s+/i, '').trim();
+                return openWebsite(site);
+            }
+
+            if (lower.includes('weather')) {
+                const city = lower.replace(/.*weather\s+(?:in\s+)?(\w+)/i, '$1');
+                return getWeather(city);
+            }
+
+            if (lower.match(/calculate|what is|how much is/i)) {
+                const expression = lower.replace(/^(calculate|what is|how much is)\s+/i, '');
+                return calculate(expression);
+            }
+
+            if (lower.includes('time')) {
+                return `The current time is ${new Date().toLocaleTimeString()}.`;
+            }
+
+            if (lower.includes('date')) {
+                return `Today's date is ${new Date().toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                })}.`;
+            }
+
+            if (lower.match(/hello|hi|hey/i)) {
+                return "Hello! I'm your AI assistant. How can I help you today? Try commands like 'search for [topic]' or 'open [website]'.";
+            }
+
+            return `I heard you say: "${command}". Try commands like "search for [topic]", "open [website]", or check the Info Hub for more options.`;
+        }
+
+        function performWebSearch(query) {
+            const searchEngines = {
+                google: `https://www.google.com/search?q=${encodeURIComponent(query)}`,
+                youtube: `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`
+            };
+
+            const results = [
+                {
+                    title: `Search results for "${query}"`,
+                    url: searchEngines.google,
+                    description: `Click to search Google for "${query}"`
+                }
+            ];
+
+            // Speak the search query
+            speakSearchQuery(query);
+
+            setTimeout(() => {
+                window.open(searchEngines.google, '_blank');
+            }, 2000);
+
+            return {
+                text: `🔍 Searching for "${query}"... Opening Google search results.`,
+                results: results
+            };
+        }
+
+        function openWebsite(site) {
+            const websites = {
+                'youtube': 'https://youtube.com',
+                'google': 'https://google.com',
+                'facebook': 'https://facebook.com',
+                'twitter': 'https://twitter.com',
+                'instagram': 'https://instagram.com',
+                'linkedin': 'https://linkedin.com',
+                'github': 'https://github.com',
+                'amazon': 'https://amazon.com',
+                'netflix': 'https://netflix.com'
+            };
+
+            const siteKey = site.toLowerCase().replace(/\s+/g, '');
+            const url = websites[siteKey] || `https://${siteKey}.com`;
+
+            setTimeout(() => {
+                window.open(url, '_blank');
+            }, 1500);
+
+            return `🌐 Opening ${site} in a new tab...`;
+        }
+
+        function getWeather(city) {
+            if (city === 'weather' || !city) city = 'your location';
+            return `🌤️ I would check the weather for ${city}, but I need weather API integration. Try searching online instead!`;
+        }
+
+        function calculate(expression) {
+            try {
+                const safeExpression = expression.replace(/[^0-9+\-*/.() ]/g, '');
+                const result = eval(safeExpression);
+                return `🧮 ${expression} = ${result}`;
+            } catch (error) {
+                return `❌ I couldn't calculate "${expression}". Please try a simpler expression.`;
+            }
+        }
+
+        function displaySearchResults(results) {
+            const resultsDiv = document.createElement('div');
+            resultsDiv.className = 'search-results';
+            resultsDiv.innerHTML = '<h4>Search Results:</h4>';
+
+            results.forEach(result => {
+                const resultItem = document.createElement('div');
+                resultItem.className = 'search-result';
+                resultItem.innerHTML = `
+                    <a href="${result.url}" target="_blank" class="search-link">${result.title}</a>
+                    <p>${result.description}</p>
+                `;
+                resultsDiv.appendChild(resultItem);
+            });
+
+            document.getElementById('messages').appendChild(resultsDiv);
+        }
+
+        function addMessage(text, className, isTyping = false) {
+            const messages = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${className}`;
+            messageDiv.innerHTML = text;
+
+            if (isTyping) {
+                messageDiv.id = 'typing-message';
+            }
+
+            messages.appendChild(messageDiv);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        function removeTypingIndicator() {
+            const typingMessage = document.getElementById('typing-message');
+            if (typingMessage) {
+                typingMessage.remove();
+            }
+        }
+
+        function updateStatus(text, className) {
+            const status = document.getElementById('status');
+            status.textContent = text;
+            status.className = `status ${className}`;
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                processCommand();
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            initSpeechRecognition();
+            initSpeechSynthesis();
+        });
+    </script>
+</body>
+
+</html>
